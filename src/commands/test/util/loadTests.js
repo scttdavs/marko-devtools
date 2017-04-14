@@ -79,10 +79,6 @@ function loadTests(dir, patterns, devTools) {
 
         var renderer = getRenderer(componentDir);
 
-        if (!renderer) {
-            return;
-        }
-
         tests.push({
             groupName,
             env,
