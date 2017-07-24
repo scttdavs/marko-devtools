@@ -46,7 +46,6 @@ function defaultTestMatcher(file) {
     }
 };
 
-
 function loadTests(dir, patterns, devTools) {
     var tests = [];
     var filesLookup = {};
@@ -57,42 +56,41 @@ function loadTests(dir, patterns, devTools) {
 
         var testMatches = testMatcher(file);
         if (testMatches === false) return;
-        var { groupName, env = 'browser' } = testMatches;
 
+        var groupName = testMatches.groupName;
+        var env = testMatches.env || 'browser';
 
         filesLookup[file] = true;
 
+        let testsDir = path.dirname(file);
 
-        var testsDir = path.dirname(file);
-
-        if (path.basename(testsDir) !== 'test') {
-            return;
+        let componentDir;
+        if (testsDir.endsWith('/test')) {
+            componentDir = path.dirname(testsDir);
+        } else {
+            componentDir = testsDir;
         }
 
-        var componentDir = path.dirname(testsDir);
+        let componentName = testMatches.componentName || path.relative(devTools.cwd, componentDir);
+        let rendererPath = testMatches.rendererPath || getRenderer(componentDir);
 
-        if (componentDir === devTools.packageRoot) {
+        if (!rendererPath) {
             return;
         }
-
-        var componentName = path.relative(devTools.cwd, componentDir);
-
-        var renderer = getRenderer(componentDir);
 
         tests.push({
             groupName,
             env,
             componentName,
             componentDir,
-            renderer,
+            renderer: rendererPath,
             file
         });
     }
 
-    function processPatterns(dir, patterns, callback) {
+    function processPatterns(dir, callback) {
         var tasks = patterns.map(function(pattern) {
             return function(callback) {
-
                 if (glob.hasMagic(pattern)) {
                     globOptions.cwd = dir;
                     glob(pattern, globOptions, function (err, files) {
@@ -123,11 +121,7 @@ function loadTests(dir, patterns, devTools) {
 
                 if (stat.isDirectory()) {
                     let dir = file;
-                    let patterns = [
-                        '**/test/*.js'
-                    ];
-
-                    processPatterns(dir, patterns, callback);
+                    processPatterns(dir, callback);
                 } else {
                     handleFile(file);
                     return callback();
@@ -139,7 +133,7 @@ function loadTests(dir, patterns, devTools) {
     }
 
     return new Promise((resolve, reject) => {
-        processPatterns(dir, patterns, function(err) {
+        processPatterns(dir, function(err) {
             if (err) {
                 return reject(err);
             }
